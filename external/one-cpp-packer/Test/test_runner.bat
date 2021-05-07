@@ -1,0 +1,1 @@
+python ../OneCppPacker.py -src test.cpp -dst test_packed.cpp -addp "include/"
