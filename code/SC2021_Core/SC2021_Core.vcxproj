@@ -122,6 +122,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>Core_PCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -138,6 +139,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>Core_PCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,10 +154,20 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Bot.cpp" />
+    <ClCompile Include="BotImpl.cpp" />
+    <ClCompile Include="CommandHelper.cpp" />
     <ClCompile Include="Core_PCH.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Bot.h" />
+    <ClInclude Include="BotImpl.h" />
+    <ClInclude Include="CommandHelper.h" />
     <ClInclude Include="Core_PCH.h" />
+    <ClInclude Include="GameConfig.h" />
+    <ClInclude Include="InputData.h" />
+    <ClInclude Include="Command.h" />
+    <ClInclude Include="OutputData.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

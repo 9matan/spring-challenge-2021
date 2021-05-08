@@ -1,6 +1,6 @@
 #pragma once
 
-unsigned int InitializeRandom();
+unsigned int UpdateRandomSeed();
 // exclusive max
 unsigned int GetRandomUInt(unsigned int const minVal, unsigned int const maxVal);
 

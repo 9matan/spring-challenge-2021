@@ -2,8 +2,31 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Core_PCH.cpp" />
+    <ClCompile Include="Bot.cpp" />
+    <ClCompile Include="BotImpl.cpp" />
+    <ClCompile Include="CommandHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core_PCH.h" />
+    <ClInclude Include="InputData.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="OutputData.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Command.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="GameConfig.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Bot.h" />
+    <ClInclude Include="BotImpl.h" />
+    <ClInclude Include="CommandHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Data">
+      <UniqueIdentifier>{a71a24e1-6758-472c-b053-d56ed1a23693}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

@@ -12,6 +12,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SC2021_Bot", "SC2021_Bot\SC2021_Bot.vcxproj", "{F8CFD8E2-33E2-4E8E-8D93-894AFBB22C43}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SC2021_Bot_Packed", "SC2021_Bot_Packed\SC2021_Bot_Packed.vcxproj", "{4B1A7CE0-2044-47D7-8B90-1069C4479C5D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F8CFD8E2-33E2-4E8E-8D93-894AFBB22C43} = {F8CFD8E2-33E2-4E8E-8D93-894AFBB22C43}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

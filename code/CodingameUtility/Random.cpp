@@ -4,7 +4,7 @@
 #include <random>
 #include <time.h>
 
-unsigned int InitializeRandom()
+unsigned int UpdateRandomSeed()
 {
     unsigned int const seed = (unsigned int)time(nullptr);
     srand(seed);
