@@ -23,10 +23,22 @@
     <ClInclude Include="Bot.h" />
     <ClInclude Include="BotImpl.h" />
     <ClInclude Include="CommandHelper.h" />
+    <ClInclude Include="Strategy.h">
+      <Filter>Data\Bot</Filter>
+    </ClInclude>
+    <ClInclude Include="CellEntity.h">
+      <Filter>Data\Bot</Filter>
+    </ClInclude>
+    <ClInclude Include="TreeEntity.h">
+      <Filter>Data\Bot</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Data">
       <UniqueIdentifier>{a71a24e1-6758-472c-b053-d56ed1a23693}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\Bot">
+      <UniqueIdentifier>{f22e8151-261c-484f-8e89-70249ee9d22d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

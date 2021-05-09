@@ -16,6 +16,9 @@ namespace sc2021
         case ECommandType::Complete:
             sprintf(buff, "COMPLETE %i", cmd.m_cellIndex);
             break;
+        case ECommandType::Grow:
+            sprintf(buff, "GROW %i", cmd.m_cellIndex);
+            break;
         default:
             assert(false);
         }
