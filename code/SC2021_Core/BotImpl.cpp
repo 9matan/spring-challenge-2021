@@ -114,7 +114,7 @@ namespace sc2021
 
     void CBotImpl::OnNewDay(STurnInputData const& newData)
     {
-        if (newData.m_day > m_dayStrategies.size())
+        if (newData.m_day >= m_dayStrategies.size())
         {
             m_currentDayStrategy = m_dayStrategies.back();
         }
