@@ -15,5 +15,6 @@ namespace sc2021
 
         inline bool HasMyTree_Dormant(bool const isDormant) const { return HasMyTree() && m_tree.m_isDormant == isDormant; }
         inline bool HasMyTree() const { return m_tree.IsValid() && m_tree.m_isMine; }
+        inline bool HasTree() const { return m_tree.IsValid(); }
     };
 }

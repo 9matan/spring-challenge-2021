@@ -311,6 +311,7 @@ namespace sc2021
                 {
                     if (!neighCell) continue;
                     if (neighCell->m_richness == 0) continue;
+                    if (neighCell->HasTree()) continue;
 
                     if (curSeedCell == nullptr
                         || (curSeedCell->m_richness < neighCell->m_richness))
