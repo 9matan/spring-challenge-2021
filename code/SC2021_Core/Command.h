@@ -7,38 +7,19 @@ namespace sc2021
         Invalid = 0,
 		Wait,
 		Complete,
-        Grow
+        Grow,
+        Seed
 	};
 
 	struct SCommand
 	{
 		int m_cellIndex;
+        int m_seedCellIndex;
 		ECommandType m_commandType = ECommandType::Invalid;
 
         inline void Invalidate() { m_commandType = ECommandType::Invalid; }
         inline bool IsValid() const { return m_commandType != ECommandType::Invalid; }
 	};
 
-    inline SCommand CreateWaitCmd()
-    {
-        SCommand cmd;
-        cmd.m_commandType = ECommandType::Wait;
-        return cmd;
-    }
-
-    inline SCommand CreateCompleteCmd(int const cellIndex)
-    {
-        SCommand cmd;
-        cmd.m_cellIndex = cellIndex;
-        cmd.m_commandType = ECommandType::Complete;
-        return cmd;
-    }
-
-    inline SCommand CreateGrowCmd(int const cellIndex)
-    {
-        SCommand cmd;
-        cmd.m_cellIndex = cellIndex;
-        cmd.m_commandType = ECommandType::Grow;
-        return cmd;
-    }
+    #define INVALID_COMMAND SCommand()
 }

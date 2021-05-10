@@ -7,6 +7,7 @@
 
 #include "SC2021_Core\Bot.h"
 #include "SC2021_Core\CommandHelper.h"
+#include "SC2021_Core\Direction.h"
 #include "SC2021_Core\InputData.h"
 #include "SC2021_Core\OutputData.h"
 
@@ -27,7 +28,6 @@ void ReadInitInputData(SInitInputData& data)
         cerr << cell.m_index << " "
             << cell.m_richness;
 
-        cell.m_neighs.resize(MAX_NEIGHS_COUNT);
         for (auto& neigh : cell.m_neighs)
         {
             cin >> neigh;

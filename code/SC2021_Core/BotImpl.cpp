@@ -3,15 +3,15 @@
 
 #include "CodingameUtility\Random.h"
 
+#include "CommandHelper.h"
+#include "StrategyHelper.h"
 #include "TreeEntity.h"
 
 using namespace std;
 
 namespace sc2021
 {
-
     // Initialize
-
     STurnOutputData CBotImpl::FirstUpdate(SInitInputData const& initInData, STurnInputData const& turnInData)
     {
         int const seed = UpdateRandomSeed();
@@ -19,35 +19,49 @@ namespace sc2021
 
         InitCells(initInData);
 
-        auto& day0 = m_dayStrategies.emplace_back();
-        day0.m_strategyType = EDayStrategyType::Predefined;
-        day0.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+        // predefined strategies
+        {
+            int nxtDay = 0;
+            {
+                auto& day = m_predefinedDayStrategies[nxtDay];
+                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+            }
 
-        auto& day1 = m_dayStrategies.emplace_back();
-        day1.m_strategyType = EDayStrategyType::Predefined;
-        day1.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+            for (int i = 0; i < 6; ++i, ++nxtDay)
+            {
+                auto& day = m_predefinedDayStrategies[nxtDay];
+                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+            }
 
-        auto& day2 = m_dayStrategies.emplace_back();
-        day2.m_strategyType = EDayStrategyType::Predefined;
-        day2.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+            {
+                auto& day = m_predefinedDayStrategies[nxtDay];
+                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+            }
+            
+            for (int i = 0; i < 5; ++i, ++nxtDay)
+            {
+                auto& day = m_predefinedDayStrategies[nxtDay];
+                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+            }
 
-        auto& day3 = m_dayStrategies.emplace_back();
-        day3.m_strategyType = EDayStrategyType::Predefined;
-        day3.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+            {
+                auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 1];
+                preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
+                preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+            }
 
-        auto& day4 = m_dayStrategies.emplace_back();
-        day4.m_strategyType = EDayStrategyType::Predefined;
-//        day4.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
+            {
+                auto& lastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER];
+                lastDay.m_turnStrategies.emplace_back(CreateCompleteLifeCycleTS(true));
+            }
 
-        auto& day5 = m_dayStrategies.emplace_back();
-        day5.m_strategyType = EDayStrategyType::Predefined;
-        day5.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
+            m_defaultDayStrategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
+            m_defaultDayStrategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+        }
 
-        auto& defaultDay = m_dayStrategies.emplace_back();
-        defaultDay.m_strategyType = EDayStrategyType::Predefined;
-        defaultDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
-        defaultDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
-
+        // to force a new day event on the first update
         m_turnData.m_day = -1;
 
         return Update(turnInData);
@@ -62,11 +76,20 @@ namespace sc2021
             cell.m_index = cellData.m_index;
             cell.m_richness = cellData.m_richness;
             cell.m_tree.Invalidate();
+
+            int direction = 0;
+            for (int neighIndex : cellData.m_neighs)
+            {
+                if (neighIndex >= 0)
+                {
+                    cell.m_neigh[direction] = m_cells.begin() + neighIndex;
+                }
+                ++direction;
+            }
         }
     }
     
     // Update
-
     STurnOutputData CBotImpl::Update(STurnInputData const& turnInData)
     {
         UpdateTrees(turnInData);
@@ -112,22 +135,32 @@ namespace sc2021
         }
     }
 
+    // Events
     void CBotImpl::OnNewDay(STurnInputData const& newData)
     {
-        if (newData.m_day >= m_dayStrategies.size())
+        if (m_predefinedDayStrategies.find(newData.m_day) == m_predefinedDayStrategies.end())
         {
-            m_currentDayStrategy = m_dayStrategies.back();
+            m_currentDayStrategy = CalculateDayStrategy();
+            if (!m_currentDayStrategy.IsValid())
+            {
+                m_currentDayStrategy = m_defaultDayStrategy;
+            }
         }
         else
         {
-            m_currentDayStrategy = m_dayStrategies[newData.m_day];
+            m_currentDayStrategy = m_predefinedDayStrategies[newData.m_day];
         }
 
         reverse(m_currentDayStrategy.m_turnStrategies.begin(), m_currentDayStrategy.m_turnStrategies.end());
     }
 
-    // Find turn
+    // Day strategy
+    SDayStrategy CBotImpl::CalculateDayStrategy()
+    {
+        return INVALID_DAY_STRATEGY;
+    }
 
+    // Find turn
     SCommand CBotImpl::FindTurn()
     {
         auto& turns = m_currentDayStrategy.m_turnStrategies;
@@ -138,10 +171,12 @@ namespace sc2021
 
             if (!cmd.IsValid())
             {
+                cerr << ToString(turn) << " -> Fail\n";
                 turns.pop_back();
             }
             else
             {
+                cerr << ToString(turn) << " -> Success\n";
                 if (!turn.m_repeat)
                 {
                     turns.pop_back();
@@ -155,30 +190,31 @@ namespace sc2021
     }
 
 
-    SCommand CBotImpl::FindTurnByStrategy(STurnStrategy const turnStrategy)
+    SCommand CBotImpl::FindTurnByStrategy(STurnStrategy const& turnStrategy)
     {
         switch (turnStrategy.m_strategyType)
         {
         case ETurnStrategyType::CompleteLifeCycle:
-            return FindTurn_CompleteLifeCycle();
+            return FindTurn_CompleteLifeCycle(turnStrategy);
         case ETurnStrategyType::IncreaseIncome:
-            return FindTurn_IncreaseIncome();
+            return FindTurn_IncreaseIncome(turnStrategy);
         case ETurnStrategyType::UpgradeToLargeTree:
-            return FindTurn_UpgradeToLargeTree();
+            return FindTurn_UpgradeToLargeTree(turnStrategy);
+        case ETurnStrategyType::SeedNewTree:
+            return FindTurn_SeedNewTree(turnStrategy);
         default:
             assert(!"Unhandled ETurnStrategyType");
         }
 
         assert(false);
-        return SCommand();
+        return INVALID_COMMAND;
     }
 
-    SCommand CBotImpl::FindTurn_CompleteLifeCycle()
+    SCommand CBotImpl::FindTurn_CompleteLifeCycle(STurnStrategy const& turnStrategy)
     {
-        cerr << "FindTurn_CompleteLifeCycle\n";
         if (m_turnData.m_mySun < COMPLETE_LIFECYCLE_PRICE)
         {
-            return SCommand();
+            return INVALID_COMMAND;
         }
 
         SCellEntity const* curCell = nullptr;
@@ -195,20 +231,19 @@ namespace sc2021
 
         if (!curCell || (curCell->m_richness <= 1 && m_turnData.m_nutriens == 0))
         {
-            return SCommand();
+            return INVALID_COMMAND;
         }
 
         return CreateCompleteCmd(curCell->m_index);
     }
 
-    SCommand CBotImpl::FindTurn_IncreaseIncome()
+    SCommand CBotImpl::FindTurn_IncreaseIncome(STurnStrategy const& turnStrategy)
     {
-        cerr << "FindTurn_IncreaseIncome\n";
         SCellEntity const* curCell = nullptr;
         int curUpgradePrice = -1;
         for (auto const& cell : m_cells)
         {
-            if (cell.HasMyTree_Dormant(false) && (cell.m_tree.m_size != MAX_TREE_SIZE && cell.m_tree.m_size != 0))
+            if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size < MAX_TREE_SIZE)
             {
                 int const price = GetUpgradePrice(cell.m_tree.m_size);
                 if (curUpgradePrice == -1
@@ -223,19 +258,18 @@ namespace sc2021
 
         if (curUpgradePrice == -1 || GetMySun() < curUpgradePrice)
         {
-            return SCommand();
+            return INVALID_COMMAND;
         }
 
         return CreateGrowCmd(curCell->m_index);
     }
 
-    SCommand CBotImpl::FindTurn_UpgradeToLargeTree()
+    SCommand CBotImpl::FindTurn_UpgradeToLargeTree(STurnStrategy const& turnStrategy)
     {
-        cerr << "FindTurn_UpgradeToLargeTree\n";
         SCellEntity const* curCell = nullptr;
         for (auto const& cell : m_cells)
         {
-            if (cell.HasMyTree_Dormant(false) && (cell.m_tree.m_size != MAX_TREE_SIZE && cell.m_tree.m_size != 0))
+            if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size < MAX_TREE_SIZE)
             {
                 if (curCell == nullptr
                     || curCell->m_tree.m_size < cell.m_tree.m_size
@@ -246,11 +280,54 @@ namespace sc2021
             }
         }
 
+        // TODO: take into account days remaining. This, we won't upgrade a tree lvl 1 -> lvl 2 if only one day remains
+        // TODO: take into account available sun points. It's impractical to upgrade the tree to lvl 3 and don't have enough suns to complete it.
+
         if (curCell == nullptr || GetMySun() < GetUpgradePrice(curCell->m_tree.m_size))
         {
-            return SCommand();
+            return INVALID_COMMAND;
         }
 
         return CreateGrowCmd(curCell->m_index);
+    }
+
+    SCommand CBotImpl::FindTurn_SeedNewTree(STurnStrategy const& turnStrategy)
+    {
+        if (GetMySun() < GetSeedPrice())
+        {
+            return INVALID_COMMAND;
+        }
+
+        // TODO: take into account the seed range of different levels of a tree;
+        // TODO: use the shadow map when it is provided;
+
+        SCellEntity const* curCell = nullptr;
+        SCellEntity const* curSeedCell = nullptr;
+        for (auto const& cell : m_cells)
+        {
+            if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size > 0)
+            {
+                for (auto const& neighCell : cell.m_neigh)
+                {
+                    if (!neighCell) continue;
+                    if (neighCell->m_richness == 0) continue;
+
+                    if (curSeedCell == nullptr
+                        || (curSeedCell->m_richness < neighCell->m_richness))
+                    {
+                        curCell = &cell;
+                        curSeedCell = neighCell;
+                    }
+                }
+            }
+        }
+
+        if (!curCell)
+        {
+            return INVALID_COMMAND;
+        }
+
+        assert(curCell && curSeedCell);
+        return CreateSeedCmd(curCell->m_index, curSeedCell->m_index);
     }
 }

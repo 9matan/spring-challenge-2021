@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "CodingameUtility\VectorInPlace.h"
+
+#include "Direction.h"
 #include "GameConfig.h"
 
 namespace sc2021
@@ -12,7 +14,7 @@ namespace sc2021
     {
         int m_index;
         int m_richness;
-        CVectorInPlace<int, MAX_NEIGHS_COUNT> m_neighs;
+        int m_neighs[DIRECTIONS_COUNT];
     };
 
     struct SInitInputData

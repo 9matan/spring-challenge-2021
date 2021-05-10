@@ -5,6 +5,7 @@
     <ClCompile Include="Bot.cpp" />
     <ClCompile Include="BotImpl.cpp" />
     <ClCompile Include="CommandHelper.cpp" />
+    <ClCompile Include="StrategyHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core_PCH.h" />
@@ -30,6 +31,10 @@
       <Filter>Data\Bot</Filter>
     </ClInclude>
     <ClInclude Include="TreeEntity.h">
+      <Filter>Data\Bot</Filter>
+    </ClInclude>
+    <ClInclude Include="StrategyHelper.h" />
+    <ClInclude Include="Direction.h">
       <Filter>Data\Bot</Filter>
     </ClInclude>
   </ItemGroup>

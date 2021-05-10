@@ -158,6 +158,7 @@
     <ClCompile Include="BotImpl.cpp" />
     <ClCompile Include="CommandHelper.cpp" />
     <ClCompile Include="Core_PCH.cpp" />
+    <ClCompile Include="StrategyHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bot.h" />
@@ -165,11 +166,13 @@
     <ClInclude Include="CellEntity.h" />
     <ClInclude Include="CommandHelper.h" />
     <ClInclude Include="Core_PCH.h" />
+    <ClInclude Include="Direction.h" />
     <ClInclude Include="GameConfig.h" />
     <ClInclude Include="InputData.h" />
     <ClInclude Include="Command.h" />
     <ClInclude Include="OutputData.h" />
     <ClInclude Include="Strategy.h" />
+    <ClInclude Include="StrategyHelper.h" />
     <ClInclude Include="TreeEntity.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
