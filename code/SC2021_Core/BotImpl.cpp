@@ -17,33 +17,31 @@ namespace sc2021
         int const seed = UpdateRandomSeed();
         cerr << "Bot seed: " << seed << "\n";
 
-        InitCells(initInData);
+        InitMap(initInData);
 
         // predefined strategies
         {
             int nxtDay = 0;
+            for (int i = 0; i < 3; ++i)
             {
-                auto& day = m_predefinedDayStrategies[nxtDay];
-                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-            }
+                {
+                    auto& day = m_predefinedDayStrategies[nxtDay++];
+                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+                }
 
-            for (int i = 0; i < 6; ++i, ++nxtDay)
-            {
-                auto& day = m_predefinedDayStrategies[nxtDay];
-                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
-            }
+                for (int j = 0; j < 4; ++j)
+                {
+                    auto& day = m_predefinedDayStrategies[nxtDay++];
+                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+                }
 
-            {
-                auto& day = m_predefinedDayStrategies[nxtDay];
-                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-            }
-            
-            for (int i = 0; i < 5; ++i, ++nxtDay)
-            {
-                auto& day = m_predefinedDayStrategies[nxtDay];
-                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+                {
+                    auto& day = m_predefinedDayStrategies[nxtDay++];
+                    day.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
+                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
+                }
             }
 
             {
@@ -57,7 +55,7 @@ namespace sc2021
                 lastDay.m_turnStrategies.emplace_back(CreateCompleteLifeCycleTS(true));
             }
 
-            m_defaultDayStrategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
+            m_defaultDayStrategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
             m_defaultDayStrategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
         }
 
@@ -67,12 +65,11 @@ namespace sc2021
         return Update(turnInData);
     }
 
-    void CBotImpl::InitCells(SInitInputData const& initInData)
+    void CBotImpl::InitMap(SInitInputData const& initInData)
     {
-        m_cells.resize(initInData.m_cells.size());
         for (auto const& cellData : initInData.m_cells)
         {
-            auto& cell = m_cells[cellData.m_index];
+            auto& cell = m_map[cellData.m_index];
             cell.m_index = cellData.m_index;
             cell.m_richness = cellData.m_richness;
             cell.m_tree.Invalidate();
@@ -82,7 +79,7 @@ namespace sc2021
             {
                 if (neighIndex >= 0)
                 {
-                    cell.m_neigh[direction] = m_cells.begin() + neighIndex;
+                    cell.m_neigh[direction] = m_map.begin() + neighIndex;
                 }
                 ++direction;
             }
@@ -114,7 +111,7 @@ namespace sc2021
         for (auto const& treeData : turnInData.m_trees)
         {
             indicesWithTree.push_back(treeData.m_cellIndex);
-            auto& cell = m_cells[treeData.m_cellIndex];
+            auto& cell = m_map[treeData.m_cellIndex];
 
             cell.m_tree.m_size = treeData.m_size;
             cell.m_tree.m_isMine = treeData.m_isMine;
@@ -126,7 +123,7 @@ namespace sc2021
             }
         }
 
-        for (auto& cell : m_cells)
+        for (auto& cell : m_map)
         {
             if (find(indicesWithTree.begin(), indicesWithTree.end(), cell.m_index) == indicesWithTree.end())
             {
@@ -218,7 +215,7 @@ namespace sc2021
         }
 
         SCellEntity const* curCell = nullptr;
-        for (auto const& cell : m_cells)
+        for (auto const& cell : m_map)
         {
             if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size == MAX_TREE_SIZE)
             {
@@ -241,7 +238,7 @@ namespace sc2021
     {
         SCellEntity const* curCell = nullptr;
         int curUpgradePrice = -1;
-        for (auto const& cell : m_cells)
+        for (auto const& cell : m_map)
         {
             if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size < MAX_TREE_SIZE)
             {
@@ -267,7 +264,7 @@ namespace sc2021
     SCommand CBotImpl::FindTurn_UpgradeToLargeTree(STurnStrategy const& turnStrategy)
     {
         SCellEntity const* curCell = nullptr;
-        for (auto const& cell : m_cells)
+        for (auto const& cell : m_map)
         {
             if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size < MAX_TREE_SIZE)
             {
@@ -303,7 +300,7 @@ namespace sc2021
 
         SCellEntity const* curCell = nullptr;
         SCellEntity const* curSeedCell = nullptr;
-        for (auto const& cell : m_cells)
+        for (auto const& cell : m_map)
         {
             if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size > 0)
             {

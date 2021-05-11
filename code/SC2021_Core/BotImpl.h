@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CellEntity.h"
 #include "InputData.h"
+#include "Map.h"
 #include "OutputData.h"
 #include "Strategy.h"
 
@@ -20,10 +20,10 @@ namespace sc2021
         SDayStrategy m_defaultDayStrategy;
 
         SDayStrategy m_currentDayStrategy;
-        CVectorInPlace<SCellEntity, MAX_CELLS_COUNT> m_cells;
+        CMap m_map;
         int m_myTreesCntBySize[MAX_TREE_SIZE + 1];
     private:
-        void InitCells(SInitInputData const& initData);
+        void InitMap(SInitInputData const& initData);
 
         void UpdateTrees(STurnInputData const& turnInData);
 
