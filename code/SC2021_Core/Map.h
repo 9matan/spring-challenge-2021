@@ -15,6 +15,7 @@ namespace sc2021
 
     public:
         void GetCells(Cells& cells, CellPredicate predicate);
+        void GetCellsInRadius(Cells& cells, int const cellIndex, int const radius);
 
     public:
         inline SCellEntity* begin() { return std::begin(m_cells); }

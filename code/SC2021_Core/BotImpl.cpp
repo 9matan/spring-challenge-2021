@@ -45,6 +45,12 @@ namespace sc2021
             }
 
             {
+                auto& day = m_predefinedDayStrategies[nxtDay++];
+                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                day.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+            }
+
+            {
                 auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 1];
                 preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
                 preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
@@ -300,13 +306,15 @@ namespace sc2021
 
         SCellEntity const* curCell = nullptr;
         SCellEntity const* curSeedCell = nullptr;
+
+        CMap::Cells neighCells;
         for (auto const& cell : m_map)
         {
             if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size > 0)
             {
-                for (auto const& neighCell : cell.m_neigh)
+                m_map.GetCellsInRadius(neighCells, cell.m_index, cell.m_tree.m_size);
+                for (auto const neighCell : neighCells)
                 {
-                    if (!neighCell) continue;
                     if (neighCell->m_richness == 0) continue;
                     if (neighCell->HasTree()) continue;
 
