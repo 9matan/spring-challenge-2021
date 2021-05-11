@@ -1,6 +1,7 @@
 #include "Core_PCH.h"
 #include "BotImpl.h"
 
+#include "CodingameUtility\Profiler.h"
 #include "CodingameUtility\Random.h"
 
 #include "CommandHelper.h"
@@ -8,6 +9,12 @@
 #include "TreeEntity.h"
 
 using namespace std;
+
+namespace BotConfigs
+{
+    // SM - shadow manager
+    constexpr int SM_MAX_DAYS_TO_SIMULATE = 4;
+}
 
 namespace sc2021
 {
@@ -114,26 +121,28 @@ namespace sc2021
     // Update
     STurnOutputData CBotImpl::Update(STurnInputData const& turnInData)
     {
-        UpdateTrees(turnInData);
-
-        if (turnInData.m_day != m_turnData.m_day)
-        {
-            OnNewDay(turnInData);
-        }
-
+        bool const isNewDay = turnInData.m_day != m_turnData.m_day;
         m_turnData = turnInData;
+
+        UpdateTrees();
+        UpdateShadowManager();
+
+        if (isNewDay)
+        {
+            OnNewDay();
+        }
 
         STurnOutputData outputData;
         outputData.m_command = FindTurn();
         return outputData;
     }
 
-    void CBotImpl::UpdateTrees(STurnInputData const& turnInData)
+    void CBotImpl::UpdateTrees()
     {
         memset(m_myTreesCntBySize, 0, sizeof(m_myTreesCntBySize));
 
         CVectorInPlace<int, MAX_CELLS_COUNT> indicesWithTree;
-        for (auto const& treeData : turnInData.m_trees)
+        for (auto const& treeData : m_turnData.m_trees)
         {
             indicesWithTree.push_back(treeData.m_cellIndex);
             auto& cell = m_map[treeData.m_cellIndex];
@@ -157,10 +166,18 @@ namespace sc2021
         }
     }
 
-    // Events
-    void CBotImpl::OnNewDay(STurnInputData const& newData)
+    void CBotImpl::UpdateShadowManager()
     {
-        if (m_predefinedDayStrategies.find(newData.m_day) == m_predefinedDayStrategies.end())
+        PROFILE_TIME("UpdateShadowManager");
+
+        m_shadowManager.ModifyConfig().m_numberOfDaysToSimulate = min(BotConfigs::SM_MAX_DAYS_TO_SIMULATE, GetDaysRemaining());
+        m_shadowManager.UpdateDarknessLevel(m_map, GetCurrentShadowDirection(GetCurrentDay()));
+    }
+
+    // Events
+    void CBotImpl::OnNewDay()
+    {
+        if (m_predefinedDayStrategies.find(GetCurrentDay()) == m_predefinedDayStrategies.end())
         {
             m_currentDayStrategy = CalculateDayStrategy();
             if (!m_currentDayStrategy.IsValid())
@@ -170,7 +187,7 @@ namespace sc2021
         }
         else
         {
-            m_currentDayStrategy = m_predefinedDayStrategies[newData.m_day];
+            m_currentDayStrategy = m_predefinedDayStrategies[GetCurrentDay()];
         }
 
         reverse(m_currentDayStrategy.m_turnStrategies.begin(), m_currentDayStrategy.m_turnStrategies.end());
@@ -329,25 +346,34 @@ namespace sc2021
             return INVALID_COMMAND;
         }
 
-        // TODO: take into account the seed range of different levels of a tree;
-        // TODO: use the shadow map when it is provided;
+        auto fitnessFunc = [this](SCellEntity const* cell)
+        {
+            float const richnessScore = (float)CELL_RICHNESS_SCORE[cell->m_richness] / CELL_RICHNESS_SCORE[MAX_CELL_RICHNESS];
+            float const richnessCoef = (float)GetCurrentDay() / LAST_DAY_NUMBER;
+
+            float const darknessScore = 1.0f - m_shadowManager.GetDarknessLevel(cell->m_index);
+            float const darknessCoef = 1.0f - richnessCoef;
+
+            return richnessScore * richnessCoef + darknessScore * darknessCoef;
+        };
 
         SCellEntity const* curCell = nullptr;
         SCellEntity const* curSeedCell = nullptr;
 
-        CMap::Cells neighCells;
+        CMap::CellEntries neighCellEntries;
         for (auto const& cell : m_map)
         {
             if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size > 0)
             {
-                m_map.GetCellsInRadius(neighCells, cell.m_index, cell.m_tree.m_size);
-                for (auto const neighCell : neighCells)
+                m_map.GetCellsInRadius(neighCellEntries, cell.m_index, cell.m_tree.m_size);
+                for (auto const entry : neighCellEntries)
                 {
+                    auto const neighCell = entry.m_cell;
                     if (neighCell->m_richness == 0) continue;
                     if (neighCell->HasTree()) continue;
 
                     if (curSeedCell == nullptr
-                        || (curSeedCell->m_richness < neighCell->m_richness))
+                        || (fitnessFunc(curSeedCell) < fitnessFunc(neighCell)))
                     {
                         curCell = &cell;
                         curSeedCell = neighCell;

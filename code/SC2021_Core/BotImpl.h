@@ -3,6 +3,7 @@
 #include "InputData.h"
 #include "Map.h"
 #include "OutputData.h"
+#include "ShadowManager.h"
 #include "Strategy.h"
 
 // TODO: Introduce the map with an impact of the shadow on each cell
@@ -21,11 +22,13 @@ namespace sc2021
 
         SDayStrategy m_currentDayStrategy;
         CMap m_map;
+        CShadowManager m_shadowManager;
         int m_myTreesCntBySize[MAX_TREE_SIZE + 1];
     private:
         void InitMap(SInitInputData const& initData);
 
-        void UpdateTrees(STurnInputData const& turnInData);
+        void UpdateTrees();
+        void UpdateShadowManager();
 
         // Day strategy
         SDayStrategy CalculateDayStrategy();
@@ -40,7 +43,7 @@ namespace sc2021
         SCommand FindTurn_SeedNewTree(STurnStrategy const& turnStrategy);
 
         // Events
-        void OnNewDay(STurnInputData const& newData);
+        void OnNewDay();
 
     private:
         inline int GetUpgradePrice(int const treeSize) const
@@ -52,5 +55,7 @@ namespace sc2021
 
         inline int GetMySun() const { return m_turnData.m_mySun; }
         inline int GetMyScore() const { return m_turnData.m_myScore; }
+        inline int GetDaysRemaining() const { return LAST_DAY_NUMBER - GetCurrentDay(); }
+        inline int GetCurrentDay() const { return m_turnData.m_day; }
     };
 }

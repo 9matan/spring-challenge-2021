@@ -159,6 +159,7 @@
     <ClCompile Include="CommandHelper.cpp" />
     <ClCompile Include="Core_PCH.cpp" />
     <ClCompile Include="Map.cpp" />
+    <ClCompile Include="ShadowManager.cpp" />
     <ClCompile Include="StrategyHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -173,6 +174,7 @@
     <ClInclude Include="Command.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="OutputData.h" />
+    <ClInclude Include="ShadowManager.h" />
     <ClInclude Include="Strategy.h" />
     <ClInclude Include="StrategyHelper.h" />
     <ClInclude Include="TreeEntity.h" />

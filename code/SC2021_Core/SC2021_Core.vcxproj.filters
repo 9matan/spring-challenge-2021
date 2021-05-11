@@ -7,6 +7,7 @@
     <ClCompile Include="CommandHelper.cpp" />
     <ClCompile Include="StrategyHelper.cpp" />
     <ClCompile Include="Map.cpp" />
+    <ClCompile Include="ShadowManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core_PCH.h" />
@@ -39,6 +40,7 @@
       <Filter>Data\Bot</Filter>
     </ClInclude>
     <ClInclude Include="Map.h" />
+    <ClInclude Include="ShadowManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Data">

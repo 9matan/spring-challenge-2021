@@ -7,6 +7,7 @@ namespace sc2021
     void CMap::GetCells(Cells& cells, CellPredicate predicate)
     {
         cells.clear();
+        cells.reserve(MAX_CELLS_COUNT);
 
         for (auto& cell : m_cells)
         {
@@ -17,7 +18,7 @@ namespace sc2021
         }
     }
 
-    void CMap::GetCellsInRadius(Cells& cells, int const cellIndex, int const radius)
+    void CMap::GetCellsInRadius(CellEntries& cells, int const cellIndex, int const radius)
     {
         assert(cellIndex >= 0 && cellIndex < MAX_CELLS_COUNT);
         cells.clear();
@@ -39,7 +40,7 @@ namespace sc2021
             auto& cell = m_cells[index];
             q.pop();
 
-            cells.push_back(&cell);
+            cells.push_back(SCellEntry(&cell, distance));
             if (distance < radius)
             {
                 for (auto& neigh : cell.m_neigh)
@@ -51,6 +52,28 @@ namespace sc2021
                     q.push(std::make_pair(neigh->m_index, distance + 1));
                 }
             }
+        }
+    }
+
+    void CMap::GetCellsInDirection(CellEntries& cells, int const cellIndex, EDirection const direction, int const maxDistance)
+    {
+        assert(cellIndex >= 0 && cellIndex < MAX_CELLS_COUNT);
+        cells.clear();
+        cells.reserve(MAX_CELLS_COUNT);
+
+        int const directionIndex = (int)direction;
+
+        SCellEntity* curCell = m_cells + cellIndex;
+        int distance = 0;
+        while (true)
+        {
+            ++distance;
+            if (distance > maxDistance) break;
+            SCellEntity* nxtCell = curCell->m_neigh[directionIndex];
+            if (!nxtCell) break;
+            curCell = nxtCell;
+
+            cells.push_back(SCellEntry(nxtCell, distance));
         }
     }
 }
