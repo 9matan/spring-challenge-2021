@@ -22,47 +22,66 @@ namespace sc2021
         // predefined strategies
         {
             int nxtDay = 0;
-            for (int i = 0; i < 3; ++i)
+
             {
-                {
-                    auto& day = m_predefinedDayStrategies[nxtDay++];
-                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
-                }
+                auto& day = m_predefinedDayStrategies[nxtDay++];
+                day.Validate();
+            }
 
-                for (int j = 0; j < 4; ++j)
-                {
-                    auto& day = m_predefinedDayStrategies[nxtDay++];
-                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
-                }
-
-                {
-                    auto& day = m_predefinedDayStrategies[nxtDay++];
-                    day.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
-                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(true));
-                }
+            {
+                auto& day = m_predefinedDayStrategies[nxtDay++];
+                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
             }
 
             {
                 auto& day = m_predefinedDayStrategies[nxtDay++];
                 day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                day.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
+            }
+
+            for (int i = 0; i < 4; ++i)
+            {
+                for (int j = 0; j < 2; ++j)
+                {
+                    auto& day = m_predefinedDayStrategies[nxtDay++];
+                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT));
+                }
+
+                {
+                    auto& day = m_predefinedDayStrategies[nxtDay++];
+                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT));
+                }
+
+                {
+                    auto& day = m_predefinedDayStrategies[nxtDay++];
+                    if (i > 0)
+                        day.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
+                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT));
+                }
+            }
+
+            for (int i = 0; i < 2; ++i)
+            {
+                auto& day = m_predefinedDayStrategies[nxtDay++];
+                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+                day.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
             }
 
             {
                 auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 1];
-                preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(true));
-                preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+                preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
+                preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
             }
 
             {
                 auto& lastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER];
-                lastDay.m_turnStrategies.emplace_back(CreateCompleteLifeCycleTS(true));
+                lastDay.m_turnStrategies.emplace_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
             }
 
             m_defaultDayStrategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
-            m_defaultDayStrategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(true));
+            m_defaultDayStrategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
         }
 
         // to force a new day event on the first update
@@ -166,22 +185,31 @@ namespace sc2021
     // Find turn
     SCommand CBotImpl::FindTurn()
     {
+        static int iterationsCount = 0;
+
         auto& turns = m_currentDayStrategy.m_turnStrategies;
         while (!turns.empty())
         {
+            ++iterationsCount;
             auto const& turn = turns.back();
             SCommand const cmd = FindTurnByStrategy(turn);
 
+            string logLine = ToString(turn);
+            logLine += " Iteration: " + to_string(iterationsCount);
+
             if (!cmd.IsValid())
             {
-                cerr << ToString(turn) << " -> Fail\n";
+                cerr << logLine << " -> Fail\n";
+                iterationsCount = 0;
                 turns.pop_back();
             }
             else
             {
-                cerr << ToString(turn) << " -> Success\n";
-                if (!turn.m_repeat)
+                cerr << logLine << " -> Success\n";
+                if (turn.m_iterationsCount != INFINITY_ITERATIONS_COUNT 
+                    && iterationsCount >= turn.m_iterationsCount)
                 {
+                    iterationsCount = 0;
                     turns.pop_back();
                 }
 

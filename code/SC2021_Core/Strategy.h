@@ -18,12 +18,13 @@ namespace sc2021
     struct STurnStrategy
     {
         ETurnStrategyType m_strategyType = ETurnStrategyType::Invalid;
-        // TODO: Replace m_repeat with counter
-        bool m_repeat;
+        int m_iterationsCount = 1;
 
         inline void Invalidate() { m_strategyType = ETurnStrategyType::Invalid; }
         inline bool IsValid() const { return m_strategyType == ETurnStrategyType::Invalid; }
     };
+
+    constexpr int INFINITY_ITERATIONS_COUNT = -1;
 
     #define INVALID_TURN_STRATEGY STurnStrategy()
 

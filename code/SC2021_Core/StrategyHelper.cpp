@@ -29,9 +29,13 @@ namespace sc2021
                 assert(!"Unhandled ETurnStrategyType");
             }
 
-            if (turnStrategy.m_repeat)
+            if (turnStrategy.m_iterationsCount == INFINITY_ITERATIONS_COUNT)
             {
-                curPos = sprintf(buff + curPos, " repetitive");
+                curPos = sprintf(buff + curPos, " (endless)");
+            }
+            else
+            {
+                curPos = sprintf(buff + curPos, " (x%i)", turnStrategy.m_iterationsCount);
             }
         }
         else
@@ -42,35 +46,35 @@ namespace sc2021
         return buff;
     }
 
-    STurnStrategy CreateCompleteLifeCycleTS(bool const repeat)
+    STurnStrategy CreateCompleteLifeCycleTS(int const iterationsCount)
     {
         STurnStrategy strategy;
         strategy.m_strategyType = ETurnStrategyType::CompleteLifeCycle;
-        strategy.m_repeat = repeat;
+        strategy.m_iterationsCount = iterationsCount;
         return strategy;
     }
 
-    STurnStrategy CreateIncreaseIncomeTS(bool const repeat)
+    STurnStrategy CreateIncreaseIncomeTS(int const iterationsCount)
     {
         STurnStrategy strategy;
         strategy.m_strategyType = ETurnStrategyType::IncreaseIncome;
-        strategy.m_repeat = repeat;
+        strategy.m_iterationsCount = iterationsCount;
         return strategy;
     }
 
-    STurnStrategy CreateUpgradeToLargeTreeTS(bool const repeat)
+    STurnStrategy CreateUpgradeToLargeTreeTS(int const iterationsCount)
     {
         STurnStrategy strategy;
         strategy.m_strategyType = ETurnStrategyType::UpgradeToLargeTree;
-        strategy.m_repeat = repeat;
+        strategy.m_iterationsCount = iterationsCount;
         return strategy;
     }
 
-    STurnStrategy CreateSeedNewTreeTS(bool const repeat)
+    STurnStrategy CreateSeedNewTreeTS(int const iterationsCount)
     {
         STurnStrategy strategy;
         strategy.m_strategyType = ETurnStrategyType::SeedNewTree;
-        strategy.m_repeat = repeat;
+        strategy.m_iterationsCount = iterationsCount;
         return strategy;
     }
 }
