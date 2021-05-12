@@ -7,6 +7,9 @@ template<typename T, size_t TSize>
 class CVectorInPlace
 {
 public:
+    static const size_t MAX_SIZE = TSize;
+
+public:
     CVectorInPlace() : m_nxtSlotIndex(0) {}
     CVectorInPlace(size_t const size) { resize(size); }
     CVectorInPlace(std::initializer_list<T> const& items) 

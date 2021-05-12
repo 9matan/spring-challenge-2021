@@ -6,25 +6,24 @@
 
 namespace sc2021
 {
-    struct SShadowManagerConfig
-    {
-        int m_numberOfDaysToSimulate;
-    };
+    constexpr int SM_MAX_DAYS_TO_SIMULATE = 6;
 
     class CShadowManager
     {
     public:
-        void UpdateDarknessLevel(CMap& map, EDirection currentShadowDirection);
+        using DayCoefCalculator = std::function<float(int startDay, int endDay, int curDay)>;
 
-        SShadowManagerConfig& ModifyConfig() { return m_config; }
+    public:
+        void UpdateDarknessLevel(CMap& map, EDirection const currentShadowDirection, int const daysToSimulate);
 
-        float GetDarknessLevel(int const cellIndex, int const treeLevel = 0) const { return m_darknessLevel[cellIndex][treeLevel]; }
-
-    private:
-        SShadowManagerConfig m_config;
-        float m_darknessLevel[MAX_CELLS_COUNT][MAX_TREE_SIZE + 1];
+        float GetDarknessLevelInRange_Avrg(int const cellIndex, int const startDay, int const endDay, int const treeLevel = 0);
+        float GetDarknessLevelInRange(int const cellIndex, int const startDay, int const endDay, DayCoefCalculator dayCoefCalculator, int const treeLevel = 0);
 
     private:
-        void UpdateCellDarknessLevel(int const cellIndex, CMap::CellEntries const& entries, int const day);
+        int m_numberOfSimulatedDays;
+        float m_darknessLevel[SM_MAX_DAYS_TO_SIMULATE + 1][MAX_CELLS_COUNT][MAX_TREE_SIZE + 1];
+
+    private:
+        float CalculateCellDarknessLevel(int const treeLevel, int const day, CMap::CellEntries const& entries);
     };
 }

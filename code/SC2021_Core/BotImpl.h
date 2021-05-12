@@ -24,6 +24,7 @@ namespace sc2021
         CMap m_map;
         CShadowManager m_shadowManager;
         int m_myTreesCntBySize[MAX_TREE_SIZE + 1];
+        int m_oppTreesCntBySize[MAX_TREE_SIZE + 1];
     private:
         void InitMap(SInitInputData const& initData);
 
@@ -58,5 +59,17 @@ namespace sc2021
         inline int GetDaysRemaining() const { return LAST_DAY_NUMBER - GetCurrentDay(); }
         inline int GetCurrentDay() const { return m_turnData.m_day; }
         inline int GetNutriens() const { return m_turnData.m_nutriens; }
+        inline int GetTreesCount(int const treeSize) const
+        {
+            assert(treeSize <= MAX_TREE_SIZE && treeSize >= -1);
+            if (treeSize == -1)
+            {
+                int res = 0;
+                for (int i = 0; i <= MAX_TREE_SIZE; ++i)
+                    res += GetTreesCount(i);
+                return res;
+            }
+            return m_myTreesCntBySize[treeSize] + m_oppTreesCntBySize[treeSize];
+        }
     };
 }

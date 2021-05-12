@@ -1,6 +1,7 @@
 #include "Core_PCH.h"
 #include "BotImpl.h"
 
+#include "CodingameUtility\CompositeFunction.h"
 #include "CodingameUtility\Profiler.h"
 #include "CodingameUtility\Random.h"
 
@@ -13,7 +14,7 @@ using namespace std;
 namespace BotConfigs
 {
     // SM - shadow manager
-    constexpr int SM_MAX_DAYS_TO_SIMULATE = 4;
+    constexpr int SM_MAX_DAYS_TO_SIMULATE = 6;
 }
 
 namespace sc2021
@@ -85,7 +86,7 @@ namespace sc2021
             m_defaultDayStrategy.m_turnStrategies.push_back(
                 CreateSeedNewTreeTS()
                     .SetCondition([this](auto const&) {
-                        return m_myTreesCntBySize[0] == 0 && (GetCurrentDay() & 1);
+                        return m_myTreesCntBySize[0] == 0 && (!((GetCurrentDay() % 5) & 1));
                     })
             );
         }
@@ -139,6 +140,7 @@ namespace sc2021
     void CBotImpl::UpdateTrees()
     {
         memset(m_myTreesCntBySize, 0, sizeof(m_myTreesCntBySize));
+        memset(m_oppTreesCntBySize, 0, sizeof(m_oppTreesCntBySize));
 
         CVectorInPlace<int, MAX_CELLS_COUNT> indicesWithTree;
         for (auto const& treeData : m_turnData.m_trees)
@@ -153,6 +155,10 @@ namespace sc2021
             if (treeData.m_isMine)
             {
                 ++m_myTreesCntBySize[treeData.m_size];
+            }
+            else
+            {
+                ++m_oppTreesCntBySize[treeData.m_size];
             }
         }
 
@@ -169,8 +175,8 @@ namespace sc2021
     {
         PROFILE_TIME("UpdateShadowManager");
 
-        m_shadowManager.ModifyConfig().m_numberOfDaysToSimulate = min(BotConfigs::SM_MAX_DAYS_TO_SIMULATE, GetDaysRemaining());
-        m_shadowManager.UpdateDarknessLevel(m_map, GetCurrentShadowDirection(GetCurrentDay()));
+        int const daysToSimulate = min(BotConfigs::SM_MAX_DAYS_TO_SIMULATE, GetDaysRemaining());
+        m_shadowManager.UpdateDarknessLevel(m_map, GetCurrentShadowDirection(GetCurrentDay()), daysToSimulate);
     }
 
     // Events
@@ -352,18 +358,22 @@ namespace sc2021
 
     SCommand CBotImpl::FindTurn_SeedNewTree(STurnStrategy const& turnStrategy)
     {
+        static const CRanges ranges{7, 16};
+
         if (GetMySun() < GetSeedPrice())
         {
             return INVALID_COMMAND;
         }
 
-        auto fitnessFunc = [this](SCellEntity const* cell)
+        size_t const gamePeriod = ranges.GetRangeIndex(GetCurrentDay());
+        auto fitnessFunc = [this, gamePeriod](SCellEntity const* cell)
         {
-            // TODO: take into account current number of large trees - nutries will decrease
-            float const richnessScore = ((float)CELL_RICHNESS_SCORE[cell->m_richness] + GetNutriens()) / ((float)CELL_RICHNESS_SCORE[MAX_CELL_RICHNESS] + GetNutriens());
+            // TODO: take into account current number of large trees - nutries number will decrease
+            float const expectedNutriensCount = (float)GetNutriens();// -(float)GetTreesCount(MAX_TREE_SIZE) * 0.33f;
+            float const richnessScore = ((float)CELL_RICHNESS_SCORE[cell->m_richness] + expectedNutriensCount) / ((float)CELL_RICHNESS_SCORE[MAX_CELL_RICHNESS] + expectedNutriensCount);
             float const richnessCoef = (float)GetCurrentDay() / LAST_DAY_NUMBER;
 
-            float const darknessScore = 1.0f - m_shadowManager.GetDarknessLevel(cell->m_index);
+            float const darknessScore = 1.0f - m_shadowManager.GetDarknessLevelInRange_Avrg(cell->m_index, 2, -1);
             float const darknessCoef = 1.0f - richnessCoef;
 
             return richnessScore * richnessCoef + darknessScore * darknessCoef;
@@ -371,7 +381,7 @@ namespace sc2021
 
         SCellEntity const* curCell = nullptr;
         SCellEntity const* curSeedCell = nullptr;
-
+        
         CMap::CellEntries neighCellEntries;
         for (auto const& cell : m_map)
         {

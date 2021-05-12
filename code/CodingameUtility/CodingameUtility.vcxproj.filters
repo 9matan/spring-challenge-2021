@@ -16,5 +16,6 @@
     <ClInclude Include="CommonDefs.h" />
     <ClInclude Include="SGrid2DInPlace.h" />
     <ClInclude Include="ContainerHelper.h" />
+    <ClInclude Include="CompositeFunction.h" />
   </ItemGroup>
 </Project>
