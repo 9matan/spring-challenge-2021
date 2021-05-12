@@ -46,36 +46,6 @@ namespace sc2021
                 day.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
             }
 
-            for (int i = 0; i < 4; ++i)
-            {
-                for (int j = 0; j < 2; ++j)
-                {
-                    auto& day = m_predefinedDayStrategies[nxtDay++];
-                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT));
-                }
-
-                {
-                    auto& day = m_predefinedDayStrategies[nxtDay++];
-                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT));
-                }
-
-                {
-                    auto& day = m_predefinedDayStrategies[nxtDay++];
-                    if (i > 0)
-                        day.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
-                    day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                    day.m_turnStrategies.push_back(CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT));
-                }
-            }
-
-            for (int i = 0; i < 2; ++i)
-            {
-                auto& day = m_predefinedDayStrategies[nxtDay++];
-                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                day.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
-            }
-
             {
                 auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 1];
                 preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
@@ -87,8 +57,37 @@ namespace sc2021
                 lastDay.m_turnStrategies.emplace_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
             }
 
-            m_defaultDayStrategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
-            m_defaultDayStrategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
+            m_defaultDayStrategy.m_turnStrategies.push_back(
+                CreateCompleteLifeCycleTS()
+                    .SetCondition([this](auto const&) {
+                        if (GetCurrentDay() < 15)
+                            return m_myTreesCntBySize[MAX_TREE_SIZE] > 4;
+                        if (GetCurrentDay() < 20)
+                            return m_myTreesCntBySize[MAX_TREE_SIZE] > 3;
+                        return m_myTreesCntBySize[MAX_TREE_SIZE] >= 2;
+                    })
+            );
+
+            m_defaultDayStrategy.m_turnStrategies.push_back(
+                CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT)
+                    .SetCondition([this](auto const&) {
+                        return GetCurrentDay() & 1;
+                    })
+            );
+
+            m_defaultDayStrategy.m_turnStrategies.push_back(
+                CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT)
+                    .SetCondition([this](auto const&) {
+                        return !(GetCurrentDay() & 1);
+                    })
+            );
+
+            m_defaultDayStrategy.m_turnStrategies.push_back(
+                CreateSeedNewTreeTS()
+                    .SetCondition([this](auto const&) {
+                        return m_myTreesCntBySize[0] == 0 && (GetCurrentDay() & 1);
+                    })
+            );
         }
 
         // to force a new day event on the first update
@@ -204,37 +203,49 @@ namespace sc2021
     {
         static int iterationsCount = 0;
 
+        SCommand cmd;
         auto& turns = m_currentDayStrategy.m_turnStrategies;
-        while (!turns.empty())
+        while (!turns.empty() && !cmd.IsValid())
         {
             ++iterationsCount;
             auto const& turn = turns.back();
-            SCommand const cmd = FindTurnByStrategy(turn);
-
             string logLine = ToString(turn);
-            logLine += " Iteration: " + to_string(iterationsCount);
+            logLine += " Iteration: " + to_string(iterationsCount);            
 
-            if (!cmd.IsValid())
+            bool removeTurn = false;
+            if (turn.m_condition && !turn.m_condition(turn))
             {
-                cerr << logLine << " -> Fail\n";
-                iterationsCount = 0;
-                turns.pop_back();
+                logLine += " -> Skip";
+                removeTurn = true;
             }
             else
             {
-                cerr << logLine << " -> Success\n";
-                if (turn.m_iterationsCount != INFINITY_ITERATIONS_COUNT 
-                    && iterationsCount >= turn.m_iterationsCount)
+                cmd = FindTurnByStrategy(turn);
+                if (!cmd.IsValid())
                 {
-                    iterationsCount = 0;
-                    turns.pop_back();
+                    logLine += " -> Fail";
+                    removeTurn = true;
                 }
+                else
+                {
+                    logLine += " -> Success";
+                    if (turn.m_iterationsCount != INFINITY_ITERATIONS_COUNT
+                        && iterationsCount >= turn.m_iterationsCount)
+                    {
+                        removeTurn = true;
+                    }
+                }
+            }
 
-                return cmd;
+            cerr << logLine << "\n";
+            if (removeTurn)
+            {
+                iterationsCount = 0;
+                turns.pop_back();
             }
         }
 
-        return CreateWaitCmd();
+        return cmd.IsValid() ? cmd : CreateWaitCmd();
     }
 
 
@@ -348,7 +359,8 @@ namespace sc2021
 
         auto fitnessFunc = [this](SCellEntity const* cell)
         {
-            float const richnessScore = (float)CELL_RICHNESS_SCORE[cell->m_richness] / CELL_RICHNESS_SCORE[MAX_CELL_RICHNESS];
+            // TODO: take into account current number of large trees - nutries will decrease
+            float const richnessScore = ((float)CELL_RICHNESS_SCORE[cell->m_richness] + GetNutriens()) / ((float)CELL_RICHNESS_SCORE[MAX_CELL_RICHNESS] + GetNutriens());
             float const richnessCoef = (float)GetCurrentDay() / LAST_DAY_NUMBER;
 
             float const darknessScore = 1.0f - m_shadowManager.GetDarknessLevel(cell->m_index);

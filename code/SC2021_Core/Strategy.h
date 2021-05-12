@@ -17,11 +17,16 @@ namespace sc2021
 
     struct STurnStrategy
     {
+        using Condition = std::function<bool(STurnStrategy const&)>;
+
         ETurnStrategyType m_strategyType = ETurnStrategyType::Invalid;
         int m_iterationsCount = 1;
+        Condition m_condition = nullptr;
 
         inline void Invalidate() { m_strategyType = ETurnStrategyType::Invalid; }
         inline bool IsValid() const { return m_strategyType == ETurnStrategyType::Invalid; }
+
+        STurnStrategy& SetCondition(Condition condition) { m_condition = condition; return *this; }
     };
 
     constexpr int INFINITY_ITERATIONS_COUNT = -1;

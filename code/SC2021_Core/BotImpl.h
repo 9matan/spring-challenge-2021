@@ -57,5 +57,6 @@ namespace sc2021
         inline int GetMyScore() const { return m_turnData.m_myScore; }
         inline int GetDaysRemaining() const { return LAST_DAY_NUMBER - GetCurrentDay(); }
         inline int GetCurrentDay() const { return m_turnData.m_day; }
+        inline int GetNutriens() const { return m_turnData.m_nutriens; }
     };
 }

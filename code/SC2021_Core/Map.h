@@ -24,7 +24,7 @@ namespace sc2021
         };
 
     public:
-        using CellPredicate = bool(*)(SCellEntity const&);
+        using CellPredicate = std::function<bool(SCellEntity const&)>;
         using Cells = CVectorInPlace<SCellEntity*, MAX_CELLS_COUNT>;
         using CellEntries = CVectorInPlace<SCellEntry, MAX_CELLS_COUNT>;
 
