@@ -15,6 +15,7 @@ public:
     }
 
     inline size_t GetRangeIndex(int const value) const { return std::upper_bound(m_rangesPoints.begin(), m_rangesPoints.end(), value) - m_rangesPoints.begin(); }
+    inline size_t RangesCount() const { return m_rangesPoints.size() + 1; }
 private:
     std::vector<int> m_rangesPoints;
 };

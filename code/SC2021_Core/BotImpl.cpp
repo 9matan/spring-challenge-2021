@@ -86,7 +86,7 @@ namespace sc2021
             m_defaultDayStrategy.m_turnStrategies.push_back(
                 CreateSeedNewTreeTS()
                     .SetCondition([this](auto const&) {
-                        return m_myTreesCntBySize[0] == 0 && (!((GetCurrentDay() % 5) & 1));
+                        return m_myTreesCntBySize[0] == 0 && ((GetCurrentDay() % 4) != 0);
                     })
             );
         }
@@ -201,7 +201,77 @@ namespace sc2021
     // Day strategy
     SDayStrategy CBotImpl::CalculateDayStrategy()
     {
-        return INVALID_DAY_STRATEGY;
+        static const CRanges gamePeriods{ 6 };
+        size_t const gamePeriod = gamePeriods.GetRangeIndex(GetCurrentDay());
+
+        SDayStrategy strategy = INVALID_DAY_STRATEGY;
+
+        if (gamePeriod == 0)
+        {
+            strategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS());
+            strategy.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
+        }
+        else if (gamePeriod == 1)
+        {
+            static const CRanges largeTreeRanges{ 15, 20 };
+            static const CVectorInPlace<int, 3> largeTreeMaxCounts{ 5, 4, 2 };
+            assert(largeTreeMaxCounts.size() == largeTreeRanges.RangesCount());
+
+            size_t const largeTreeRange = largeTreeRanges.GetRangeIndex(GetCurrentDay());
+            int const largeTreeMaxCount = largeTreeMaxCounts[largeTreeRange];
+            int const largeTreeCurrentCount = m_myTreesCntBySize[MAX_TREE_SIZE];
+            {
+                if (largeTreeCurrentCount >= largeTreeMaxCount)
+                {
+                    strategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
+                }
+                else if (largeTreeCurrentCount == largeTreeMaxCount - 1)
+                {
+                    bool const canUpgradeToLarge = ((GetUpgradePrice(2) - 1 + COMPLETE_LIFECYCLE_PRICE) <= GetMySun()) && (m_myTreesCntBySize[MAX_TREE_SIZE - 1] > 0);
+                    if (canUpgradeToLarge)
+                    {
+                        strategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
+                        strategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS());
+                    }
+                }
+            }
+
+            {
+                auto const upgradeToLargeTreeTS = CreateUpgradeToLargeTreeTS()
+                    .SetCondition(
+                        [this, largeTreeMaxCount](auto const&) {
+                            return m_myTreesCntBySize[MAX_TREE_SIZE] < largeTreeMaxCount;
+                        }
+                );
+                auto const increaseIncomeTS = CreateIncreaseIncomeTS();
+
+                strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
+                for (int i = 0; i < 4; ++i)
+                {
+                    if (GetCurrentDay() & 1)
+                    {
+                        strategy.m_turnStrategies.push_back(increaseIncomeTS);
+                        strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
+                    }
+                    else
+                    {
+                        strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
+                        strategy.m_turnStrategies.push_back(increaseIncomeTS);
+                    }
+                }
+            }
+        }
+
+        strategy.m_turnStrategies.push_back(
+            CreateSeedNewTreeTS()
+            .SetCondition(
+                [this](auto const&) {
+                    return m_myTreesCntBySize[0] == 0;
+                }
+            )
+        );
+
+        return strategy;
     }
 
     // Find turn
@@ -331,21 +401,26 @@ namespace sc2021
 
     SCommand CBotImpl::FindTurn_UpgradeToLargeTree(STurnStrategy const& turnStrategy)
     {
-        SCellEntity const* curCell = nullptr;
-        for (auto const& cell : m_map)
-        {
-            if (cell.HasMyTree_Dormant(false) && cell.m_tree.m_size < MAX_TREE_SIZE)
+        CMap::Cells validCells;
+        m_map.GetCells(validCells, [this](SCellEntity const& cell)
             {
-                if (curCell == nullptr
-                    || curCell->m_tree.m_size < cell.m_tree.m_size
-                    || (curCell->m_tree.m_size == cell.m_tree.m_size && curCell->m_richness < cell.m_richness))
-                {
-                    curCell = &cell;
-                }
+                return cell.HasMyTree_Dormant(false)
+                    && cell.m_tree.m_size < MAX_TREE_SIZE
+                    && (MAX_TREE_SIZE - cell.m_tree.m_size) <= GetDaysRemaining();
+            }
+        );
+
+        SCellEntity const* curCell = nullptr;
+        for (auto const& cell : validCells)
+        {
+            if (curCell == nullptr
+                || curCell->m_tree.m_size < cell->m_tree.m_size
+                || (curCell->m_tree.m_size == cell->m_tree.m_size && curCell->m_richness < cell->m_richness))
+            {
+                curCell = cell;
             }
         }
 
-        // TODO: take into account days remaining. This, we won't upgrade a tree lvl 1 -> lvl 2 if only one day remains
         // TODO: take into account available sun points. It's impractical to upgrade the tree to lvl 3 and don't have enough suns to complete it.
 
         if (curCell == nullptr || GetMySun() < GetUpgradePrice(curCell->m_tree.m_size))
