@@ -11,13 +11,13 @@ namespace sc2021
     class CShadowManager
     {
     public:
-        using DayCoefCalculator = std::function<float(int startDay, int endDay, int curDay)>;
+        using DarknessCalculator = std::function<float(int startDay, int endDay, int curDay, float darkness)>;
 
     public:
         void UpdateDarknessLevel(CMap& map, EDirection const currentShadowDirection, int const daysToSimulate);
 
         float GetDarknessLevelInRange_Avrg(int const cellIndex, int const startDay, int const endDay, int const treeLevel = 0);
-        float GetDarknessLevelInRange(int const cellIndex, int const startDay, int const endDay, DayCoefCalculator dayCoefCalculator, int const treeLevel = 0);
+        float GetDarknessLevelInRange(int const cellIndex, int const startDay, int const endDay, DarknessCalculator darknessCalculator, int const treeLevel = 0);
 
     private:
         int m_numberOfSimulatedDays;

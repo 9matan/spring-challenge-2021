@@ -26,70 +26,8 @@ namespace sc2021
         cerr << "Bot seed: " << seed << "\n";
 
         InitMap(initInData);
-
-        // predefined strategies
-        {
-            int nxtDay = 0;
-
-            {
-                auto& day = m_predefinedDayStrategies[nxtDay++];
-                day.Validate();
-            }
-
-            {
-                auto& day = m_predefinedDayStrategies[nxtDay++];
-                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
-            }
-
-            {
-                auto& day = m_predefinedDayStrategies[nxtDay++];
-                day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
-                day.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
-            }
-
-            {
-                auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 1];
-                preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
-                preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
-            }
-
-            {
-                auto& lastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER];
-                lastDay.m_turnStrategies.emplace_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
-            }
-
-            m_defaultDayStrategy.m_turnStrategies.push_back(
-                CreateCompleteLifeCycleTS()
-                    .SetCondition([this](auto const&) {
-                        if (GetCurrentDay() < 15)
-                            return m_myTreesCntBySize[MAX_TREE_SIZE] > 4;
-                        if (GetCurrentDay() < 20)
-                            return m_myTreesCntBySize[MAX_TREE_SIZE] > 3;
-                        return m_myTreesCntBySize[MAX_TREE_SIZE] >= 2;
-                    })
-            );
-
-            m_defaultDayStrategy.m_turnStrategies.push_back(
-                CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT)
-                    .SetCondition([this](auto const&) {
-                        return GetCurrentDay() & 1;
-                    })
-            );
-
-            m_defaultDayStrategy.m_turnStrategies.push_back(
-                CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT)
-                    .SetCondition([this](auto const&) {
-                        return !(GetCurrentDay() & 1);
-                    })
-            );
-
-            m_defaultDayStrategy.m_turnStrategies.push_back(
-                CreateSeedNewTreeTS()
-                    .SetCondition([this](auto const&) {
-                        return m_myTreesCntBySize[0] == 0 && ((GetCurrentDay() % 4) != 0);
-                    })
-            );
-        }
+        InitPredefinedDayStrategies();
+        InitDefaultDayStrategy();
 
         // to force a new day event on the first update
         m_turnData.m_day = -1;
@@ -196,82 +134,6 @@ namespace sc2021
         }
 
         reverse(m_currentDayStrategy.m_turnStrategies.begin(), m_currentDayStrategy.m_turnStrategies.end());
-    }
-
-    // Day strategy
-    SDayStrategy CBotImpl::CalculateDayStrategy()
-    {
-        static const CRanges gamePeriods{ 6 };
-        size_t const gamePeriod = gamePeriods.GetRangeIndex(GetCurrentDay());
-
-        SDayStrategy strategy = INVALID_DAY_STRATEGY;
-
-        if (gamePeriod == 0)
-        {
-            strategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS());
-            strategy.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
-        }
-        else if (gamePeriod == 1)
-        {
-            static const CRanges largeTreeRanges{ 15, 20 };
-            static const CVectorInPlace<int, 3> largeTreeMaxCounts{ 5, 4, 2 };
-            assert(largeTreeMaxCounts.size() == largeTreeRanges.RangesCount());
-
-            size_t const largeTreeRange = largeTreeRanges.GetRangeIndex(GetCurrentDay());
-            int const largeTreeMaxCount = largeTreeMaxCounts[largeTreeRange];
-            int const largeTreeCurrentCount = m_myTreesCntBySize[MAX_TREE_SIZE];
-            {
-                if (largeTreeCurrentCount >= largeTreeMaxCount)
-                {
-                    strategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
-                }
-                else if (largeTreeCurrentCount == largeTreeMaxCount - 1)
-                {
-                    bool const canUpgradeToLarge = ((GetUpgradePrice(2) - 1 + COMPLETE_LIFECYCLE_PRICE) <= GetMySun()) && (m_myTreesCntBySize[MAX_TREE_SIZE - 1] > 0);
-                    if (canUpgradeToLarge)
-                    {
-                        strategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
-                        strategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS());
-                    }
-                }
-            }
-
-            {
-                auto const upgradeToLargeTreeTS = CreateUpgradeToLargeTreeTS()
-                    .SetCondition(
-                        [this, largeTreeMaxCount](auto const&) {
-                            return m_myTreesCntBySize[MAX_TREE_SIZE] < largeTreeMaxCount;
-                        }
-                );
-                auto const increaseIncomeTS = CreateIncreaseIncomeTS();
-
-                strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
-                for (int i = 0; i < 4; ++i)
-                {
-                    if (GetCurrentDay() & 1)
-                    {
-                        strategy.m_turnStrategies.push_back(increaseIncomeTS);
-                        strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
-                    }
-                    else
-                    {
-                        strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
-                        strategy.m_turnStrategies.push_back(increaseIncomeTS);
-                    }
-                }
-            }
-        }
-
-        strategy.m_turnStrategies.push_back(
-            CreateSeedNewTreeTS()
-            .SetCondition(
-                [this](auto const&) {
-                    return m_myTreesCntBySize[0] == 0;
-                }
-            )
-        );
-
-        return strategy;
     }
 
     // Find turn
@@ -402,11 +264,12 @@ namespace sc2021
     SCommand CBotImpl::FindTurn_UpgradeToLargeTree(STurnStrategy const& turnStrategy)
     {
         CMap::Cells validCells;
-        m_map.GetCells(validCells, [this](SCellEntity const& cell)
+        m_map.GetCells(validCells, [this, &turnStrategy](SCellEntity const& cell)
             {
                 return cell.HasMyTree_Dormant(false)
                     && cell.m_tree.m_size < MAX_TREE_SIZE
-                    && (MAX_TREE_SIZE - cell.m_tree.m_size) <= GetDaysRemaining();
+                    && (MAX_TREE_SIZE - cell.m_tree.m_size) <= GetDaysRemaining()
+                    && turnStrategy.CheckTreeSizeLimits(cell.m_tree.m_size);
             }
         );
 
@@ -422,7 +285,6 @@ namespace sc2021
         }
 
         // TODO: take into account available sun points. It's impractical to upgrade the tree to lvl 3 and don't have enough suns to complete it.
-
         if (curCell == nullptr || GetMySun() < GetUpgradePrice(curCell->m_tree.m_size))
         {
             return INVALID_COMMAND;
@@ -486,5 +348,162 @@ namespace sc2021
 
         assert(curCell && curSeedCell);
         return CreateSeedCmd(curCell->m_index, curSeedCell->m_index);
+    }
+
+    // DAY STRATEGY
+    void CBotImpl::InitDefaultDayStrategy()
+    {
+        m_defaultDayStrategy.m_turnStrategies.push_back(
+            CreateCompleteLifeCycleTS()
+            .SetCondition([this](auto const&) {
+                if (GetCurrentDay() < 15)
+                    return m_myTreesCntBySize[MAX_TREE_SIZE] > 4;
+                if (GetCurrentDay() < 20)
+                    return m_myTreesCntBySize[MAX_TREE_SIZE] > 3;
+                return m_myTreesCntBySize[MAX_TREE_SIZE] >= 2;
+                })
+        );
+
+        m_defaultDayStrategy.m_turnStrategies.push_back(
+            CreateIncreaseIncomeTS(INFINITY_ITERATIONS_COUNT)
+            .SetCondition([this](auto const&) {
+                return GetCurrentDay() & 1;
+                })
+        );
+
+        m_defaultDayStrategy.m_turnStrategies.push_back(
+            CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT)
+            .SetCondition([this](auto const&) {
+                return !(GetCurrentDay() & 1);
+                })
+        );
+
+        m_defaultDayStrategy.m_turnStrategies.push_back(
+            CreateSeedNewTreeTS()
+            .SetCondition([this](auto const&) {
+                return m_myTreesCntBySize[0] == 0 && ((GetCurrentDay() % 4) != 0);
+                })
+        );
+    }
+
+    void CBotImpl::InitPredefinedDayStrategies()
+    {
+        int nxtDay = 0;
+
+        {
+            auto& day = m_predefinedDayStrategies[nxtDay++];
+            day.Validate();
+        }
+
+        {
+            auto& day = m_predefinedDayStrategies[nxtDay++];
+            day.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
+        }
+
+        {
+            auto& day = m_predefinedDayStrategies[nxtDay++];
+            day.m_turnStrategies.push_back(CreateSeedNewTreeTS());
+            day.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
+        }
+
+        {
+            auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 3];
+            preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
+            preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
+        }
+
+        {
+            auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 2];
+            preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
+            preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
+        }
+
+        {
+            auto& preLastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER - 1];
+            preLastDay.m_turnStrategies.push_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
+            preLastDay.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS(INFINITY_ITERATIONS_COUNT));
+        }
+
+        {
+            auto& lastDay = m_predefinedDayStrategies[LAST_DAY_NUMBER];
+            lastDay.m_turnStrategies.emplace_back(CreateCompleteLifeCycleTS(INFINITY_ITERATIONS_COUNT));
+        }
+    }
+
+    SDayStrategy CBotImpl::CalculateDayStrategy()
+    {
+        static const CRanges gamePeriods{ 6 };
+        size_t const gamePeriod = gamePeriods.GetRangeIndex(GetCurrentDay());
+
+        SDayStrategy strategy = INVALID_DAY_STRATEGY;
+
+        if (gamePeriod == 0)
+        {
+            strategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS());
+            strategy.m_turnStrategies.push_back(CreateIncreaseIncomeTS());
+        }
+        else if (gamePeriod == 1)
+        {
+            static const CRanges largeTreeRanges{ 15, 20 };
+            static const CVectorInPlace<int, 3> largeTreeMaxCounts{ 5, 4, 2 };
+            assert(largeTreeMaxCounts.size() == largeTreeRanges.RangesCount());
+
+            size_t const largeTreeRange = largeTreeRanges.GetRangeIndex(GetCurrentDay());
+            int const largeTreeMaxCount = largeTreeMaxCounts[largeTreeRange];
+            int const largeTreeCurrentCount = m_myTreesCntBySize[MAX_TREE_SIZE];
+            {
+                if (largeTreeCurrentCount >= largeTreeMaxCount)
+                {
+                    strategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
+                    strategy.m_turnStrategies.push_back(CreateIncreaseIncomeTS().SetTreeSizeLimits(0, 0));
+                }
+                else if (largeTreeCurrentCount == largeTreeMaxCount - 1)
+                {
+                    bool const canUpgradeToLarge = ((GetUpgradePrice(2) - 1 + COMPLETE_LIFECYCLE_PRICE) <= GetMySun()) && (m_myTreesCntBySize[MAX_TREE_SIZE - 1] > 0);
+                    if (canUpgradeToLarge)
+                    {
+                        strategy.m_turnStrategies.push_back(CreateCompleteLifeCycleTS());
+                        strategy.m_turnStrategies.push_back(CreateUpgradeToLargeTreeTS());
+                        strategy.m_turnStrategies.push_back(CreateIncreaseIncomeTS().SetTreeSizeLimits(0, 0));
+                    }
+                }
+            }
+
+            {
+                auto const upgradeToLargeTreeTS = CreateUpgradeToLargeTreeTS()
+                    .SetCondition(
+                        [this, largeTreeMaxCount](auto const&) {
+                            return m_myTreesCntBySize[MAX_TREE_SIZE] < largeTreeMaxCount;
+                        }
+                );
+                auto const increaseIncomeTS = CreateIncreaseIncomeTS();
+
+                strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
+                for (int i = 0; i < 4; ++i)
+                {
+                    if (GetCurrentDay() & 1)
+                    {
+                        strategy.m_turnStrategies.push_back(increaseIncomeTS);
+                        strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
+                    }
+                    else
+                    {
+                        strategy.m_turnStrategies.push_back(upgradeToLargeTreeTS);
+                        strategy.m_turnStrategies.push_back(increaseIncomeTS);
+                    }
+                }
+            }
+        }
+
+        strategy.m_turnStrategies.push_back(
+            CreateSeedNewTreeTS()
+            .SetCondition(
+                [this](auto const&) {
+                    return m_myTreesCntBySize[0] == 0;
+                }
+            )
+        );
+
+        return strategy;
     }
 }

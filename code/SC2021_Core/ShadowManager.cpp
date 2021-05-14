@@ -51,14 +51,14 @@ namespace sc2021
 
     float CShadowManager::GetDarknessLevelInRange_Avrg(int const cellIndex, int const startDay, int const endDay, int const treeLevel)
     {
-        auto avrgFunction = [](int startDay, int endDay, int curDay)
+        auto avrgFunction = [](int startDay, int endDay, int curDay, float darkness)
         {
-            return 1.0f / (float)(endDay - startDay + 1);
+            return (1.0f / (float)(endDay - startDay + 1)) * darkness;
         };
         return GetDarknessLevelInRange(cellIndex, startDay, endDay, avrgFunction, treeLevel);
     }
 
-    float CShadowManager::GetDarknessLevelInRange(int const cellIndex, int const startDay, int const endDay, DayCoefCalculator dayCoefCalculator, int const treeLevel)
+    float CShadowManager::GetDarknessLevelInRange(int const cellIndex, int const startDay, int const endDay, DarknessCalculator darknessCalculator, int const treeLevel)
     {
         if (startDay > m_numberOfSimulatedDays)
         {
@@ -81,8 +81,10 @@ namespace sc2021
         float darkness = 0.0f;
         for (int day = max(startDay, 1); day <= validateEndDay; ++day)
         {
-            float const currentDayCoef = (dayCoefCalculator) ? dayCoefCalculator(startDay, validateEndDay, day) : 1.0f;
-            darkness += m_darknessLevel[day][cellIndex][treeLevel] * currentDayCoef;
+            float const curDarkness = (darknessCalculator)
+                ? darknessCalculator(startDay, validateEndDay, day, m_darknessLevel[day][cellIndex][treeLevel])
+                : m_darknessLevel[day][cellIndex][treeLevel];
+            darkness += curDarkness;
         }
 
         return darkness;

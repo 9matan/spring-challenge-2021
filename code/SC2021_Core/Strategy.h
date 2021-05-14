@@ -22,11 +22,25 @@ namespace sc2021
         ETurnStrategyType m_strategyType = ETurnStrategyType::Invalid;
         int m_iterationsCount = 1;
         Condition m_condition = nullptr;
+        int m_minTreeSize = 0;
+        int m_maxTreeSize = MAX_TREE_SIZE;
 
         inline void Invalidate() { m_strategyType = ETurnStrategyType::Invalid; }
         inline bool IsValid() const { return m_strategyType == ETurnStrategyType::Invalid; }
+        inline bool CheckTreeSizeLimits(int const treeSize) const { return treeSize >= m_minTreeSize && treeSize <= m_maxTreeSize; }
 
-        STurnStrategy& SetCondition(Condition condition) { m_condition = condition; return *this; }
+        inline STurnStrategy& SetCondition(Condition condition) { m_condition = condition; return *this; }
+        inline STurnStrategy& SetTreeSizeLimits(int const minSize, int const maxSize)
+        {
+            assert(minSize <= maxSize);
+            assert(minSize >= 0);
+            assert(maxSize <= MAX_TREE_SIZE);
+
+            m_minTreeSize = minSize;
+            m_maxTreeSize = maxSize;
+
+            return *this;
+        }
     };
 
     constexpr int INFINITY_ITERATIONS_COUNT = -1;

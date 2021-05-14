@@ -6,8 +6,6 @@
 #include "ShadowManager.h"
 #include "Strategy.h"
 
-// TODO: Introduce the map with an impact of the shadow on each cell
-
 namespace sc2021
 {
     class CBotImpl
@@ -27,6 +25,8 @@ namespace sc2021
         int m_oppTreesCntBySize[MAX_TREE_SIZE + 1];
     private:
         void InitMap(SInitInputData const& initData);
+        void InitDefaultDayStrategy();
+        void InitPredefinedDayStrategies();
 
         void UpdateTrees();
         void UpdateShadowManager();
